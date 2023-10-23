@@ -1,0 +1,60 @@
+---
+title: "MaStat CompStat HW"
+author: "Sander Bossier"
+date: "`r Sys.Date()`"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## 1.
+
+```{r}
+HairEye <- apply(
+  X = HairEyeColor,
+  MARGIN = c(1, 2),
+  FUN = sum
+)
+ClassSurvived <- apply(
+  X = Titanic,
+  MARGIN = c(1,4),
+  FUN = sum
+)
+```
+
+## 2.
+
+```{r}
+HairEye[
+  order(rowSums(HairEye), decreasing = TRUE),
+  order(colSums(HairEye), decreasing = TRUE)
+]
+```
+
+## 3.
+
+```{r}
+# Convert the matrix to a vector and rank the elements
+ranked_vector <- rank(as.vector(HairEye), ties.method = "first")
+
+# Convert the ranked vector back to a matrix with the same dimensions as HairEye
+ranked_HairEye <- matrix(ranked_vector, nrow = nrow(HairEye), ncol = ncol(HairEye))
+
+# Assign the dimnames from the original HairEye matrix to the ranked matrix
+dimnames(ranked_HairEye) <- dimnames(HairEye)
+ranked_HairEye
+
+```
+
+## 4.
+
+```{r}
+c(HairEye["Brown", "Brown"],
+  HairEye["Blond", "Blue"],
+  HairEye["Brown", "Blue"])
+HairEye[c("Brown", "Blond"), c("Brown", "Blue")]
+
+```
+
