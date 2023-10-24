@@ -45,7 +45,6 @@ ranked_HairEye <- matrix(ranked_vector, nrow = nrow(HairEye), ncol = ncol(HairEy
 # Assign the dimnames from the original HairEye matrix to the ranked matrix
 dimnames(ranked_HairEye) <- dimnames(HairEye)
 ranked_HairEye
-
 ```
 
 ## 4.
@@ -54,7 +53,80 @@ ranked_HairEye
 c(HairEye["Brown", "Brown"],
   HairEye["Blond", "Blue"],
   HairEye["Brown", "Blue"])
-HairEye[c("Brown", "Blond"), c("Brown", "Blue")]
+HairEye["Brown","Brown"]
 
+```
+
+## 5.
+
+```{r}
+table <- as.table(HairEye)
+df <- as.data.frame(table)
+knitr::kable(df)
+```
+
+## 6.
+
+```{r}
+all2x2 <- lapply(seq_len(nrow(HairEye)), function(i) {
+  lapply(seq_len(ncol(HairEye)), function(j) {
+    cell_value <- HairEye[i, j]
+    row_sum <- sum(HairEye[i, -j])
+    col_sum <- sum(HairEye[-i, j])
+    other_sum <- sum(HairEye[-i, -j])
+    matrix(c(cell_value, col_sum, row_sum, other_sum), nrow = 2)
+  })
+})
+
+# Flatten the list of lists to a single list
+all2x2 <- do.call(c, all2x2)
+all2x2
+```
+
+## 7.
+
+```{r}
+all2x2for <- expression({all2x2 <- vector("list", length = nrow(HairEye) * ncol(HairEye))
+index <- 1
+
+for (i in 1:nrow(HairEye)) {
+  for (j in 1:ncol(HairEye)) {
+    # The value of the cell itself
+    cell_value <- HairEye[i, j]
+    
+    # Sum of values in the same row but not in the same column
+    row_sum <- sum(HairEye[i, -j])
+    
+    # Sum of values in the same column but not in the same row
+    col_sum <- sum(HairEye[-i, j])
+    
+    # Sum of the values not in the same row or column
+    other_sum <- sum(HairEye[-i, -j])
+    
+    # Create the 2x2 matrix
+    matrix_2x2 <- matrix(
+      c(cell_value, col_sum, row_sum, other_sum), nrow = 2
+      )
+    
+    # Add the 2x2 matrix to the list
+    all2x2[[index]] <- matrix_2x2
+    index <- index + 1
+  }
+}
+
+all2x2})
+```
+
+```{r}
+library(microbenchmark)
+resultfor <- microbenchmark(all2x2for,
+               unit = "us")
+result <- summary(resultfor)
+```
+
+The average time of computation is `r result$mean` microseconds and the average time of the second computation is `r ` microseconds.
+
+```{r}
+result$mean
 ```
 
