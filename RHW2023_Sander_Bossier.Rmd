@@ -7,6 +7,7 @@ output: html_document
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
+library(microbenchmark)
 ```
 
 ## 1.
@@ -14,14 +15,16 @@ knitr::opts_chunk$set(echo = TRUE)
 ```{r}
 HairEye <- apply(
   X = HairEyeColor,
-  MARGIN = c(1, 2),
+  MARGIN = c("Hair", "Eye"),
   FUN = sum
 )
 ClassSurvived <- apply(
   X = Titanic,
-  MARGIN = c(1,4),
+  MARGIN = c("Class","Survived"),
   FUN = sum
 )
+HairEye
+ClassSurvived
 ```
 
 ## 2.
@@ -36,15 +39,20 @@ HairEye[
 ## 3.
 
 ```{r}
-# Convert the matrix to a vector and rank the elements
-ranked_vector <- rank(as.vector(HairEye), ties.method = "first")
+HairEye_ranks_vec <- rank(
+  as.vector(HairEye),
+  ties.method = "average"
+)
 
-# Convert the ranked vector back to a matrix with the same dimensions as HairEye
-ranked_HairEye <- matrix(ranked_vector, nrow = nrow(HairEye), ncol = ncol(HairEye))
+HairEye_ranked <- matrix(
+  HairEye_ranks_vec,
+  nrow = nrow(HairEye),
+  ncol = ncol(HairEye)
+)
 
-# Assign the dimnames from the original HairEye matrix to the ranked matrix
-dimnames(ranked_HairEye) <- dimnames(HairEye)
-ranked_HairEye
+dimnames(HairEye_ranked) <- dimnames(HairEye)
+
+HairEye_ranked
 ```
 
 ## 4.
@@ -53,7 +61,8 @@ ranked_HairEye
 c(HairEye["Brown", "Brown"],
   HairEye["Blond", "Blue"],
   HairEye["Brown", "Blue"])
-HairEye["Brown","Brown"]
+
+HairEye[c("Brown", "Blond"),c("Brown", "Blue")]
 
 ```
 
@@ -68,65 +77,144 @@ knitr::kable(df)
 ## 6.
 
 ```{r}
-all2x2 <- lapply(seq_len(nrow(HairEye)), function(i) {
-  lapply(seq_len(ncol(HairEye)), function(j) {
-    cell_value <- HairEye[i, j]
-    row_sum <- sum(HairEye[i, -j])
-    col_sum <- sum(HairEye[-i, j])
-    other_sum <- sum(HairEye[-i, -j])
-    matrix(c(cell_value, col_sum, row_sum, other_sum), nrow = 2)
-  })
-})
-
-# Flatten the list of lists to a single list
-all2x2 <- do.call(c, all2x2)
-all2x2
+all2x2_lapply_exp <- expression(
+  {
+    all2x2 <- lapply(seq_len(nrow(HairEye)), function(j) {
+      
+      lapply(seq_len(ncol(HairEye)), function(i) {
+        
+        cell_value <- HairEye[i, j]
+        
+        row_sum <- sum(HairEye[i, -j])
+        
+        col_sum <- sum(HairEye[-i, j])
+        
+        rest_sum <- sum(HairEye[-i, -j])
+        
+        matrix(c(cell_value, col_sum, row_sum, rest_sum), nrow = 2)
+        
+        })
+      
+      })
+    
+    all2x2 <- do.call(c, all2x2)
+  }
+)
+#all2x2_lapply_exp
+#all2x2
 ```
 
 ## 7.
 
 ```{r}
-all2x2for <- expression({all2x2 <- vector("list", length = nrow(HairEye) * ncol(HairEye))
-index <- 1
+all2x2_for_exp <- expression(
+  {
+    all2x2 <- vector("list", length = nrow(HairEye) * ncol(HairEye))
+    
+    index <- 1
+    
+    for (j in 1:nrow(HairEye)) {
+      for (i in 1:ncol(HairEye)) {
+        # The value of the cell itself
+        cell_value <- HairEye[i, j]
+        
+        # Sum of values in the same row but not in the same column
+        row_sum <- sum(HairEye[i, -j])
+        
+        # Sum of values in the same column but not in the same row
+        col_sum <- sum(HairEye[-i, j])
+        
+        # Sum of the values not in the same row or column
+        other_sum <- sum(HairEye[-i, -j])
+        
+        # Create the 2x2 matrix
+        matrix_2x2 <- matrix(
+          c(cell_value, col_sum, row_sum, other_sum),
+          nrow = 2
+          )
+      
+        # Add the 2x2 matrix to the list
+        all2x2[[index]] <- matrix_2x2
+        index <- index + 1
+        }
+      }
+    }
+)
+```
 
-for (i in 1:nrow(HairEye)) {
-  for (j in 1:ncol(HairEye)) {
-    # The value of the cell itself
-    cell_value <- HairEye[i, j]
-    
-    # Sum of values in the same row but not in the same column
-    row_sum <- sum(HairEye[i, -j])
-    
-    # Sum of values in the same column but not in the same row
-    col_sum <- sum(HairEye[-i, j])
-    
-    # Sum of the values not in the same row or column
-    other_sum <- sum(HairEye[-i, -j])
-    
-    # Create the 2x2 matrix
-    matrix_2x2 <- matrix(
-      c(cell_value, col_sum, row_sum, other_sum), nrow = 2
+```{r}
+all2x2_lapply_benchm <- microbenchmark(
+  all2x2_lapply_exp,
+  unit = "us",
+  times = 10000
+)
+
+all2x2_lapply_benchm_result <- summary(all2x2_lapply_benchm)
+
+all2x2_for_benchm <- microbenchmark(
+  all2x2_for_exp,
+  units = "us",
+  times = 10000
+)
+
+all2x2_for_benchm_result <- summary(all2x2_for_benchm)
+```
+
+The average time of the first computation is `r all2x2_lapply_benchm_result$mean` microseconds and the average time of the second computation is `r all2x2_for_benchm_result$mean` microseconds.
+
+## 8.
+
+```{r}
+GlobalOddsRatio <- function(mat) {
+  if (!is.matrix(mat)) stop("is.matrix(x) is not TRUE")
+  OddsRatioList <- lapply(
+    X = seq_len(nrow(mat)),
+    FUN = function(j) {
+      lapply(
+        X = seq_len(ncol(mat)),
+        FUN = function(i) {
+          N_i_j <- mat[i,j]
+          N_i1_j1 <- sum(mat[-i, -j])
+          N_i1_j <- sum(mat[-i, j])
+          N_i_j1 <- sum(mat[i, -j])
+          OddsRatio <- (N_i_j * N_i1_j1) / (N_i1_j * N_i_j1)
+      }
       )
-    
-    # Add the 2x2 matrix to the list
-    all2x2[[index]] <- matrix_2x2
-    index <- index + 1
-  }
+    }
+  )
+  OddsRatioVector <- do.call(c, OddsRatioList)
+  OddsRatioMatrix <- matrix(OddsRatioVector, nrow=nrow(mat), ncol=ncol(mat))
+  dimnames(OddsRatioMatrix) <- dimnames(mat)
+  OddsRatioMatrix
 }
-
-all2x2})
+GlobalOddsRatio(HairEye)
 ```
 
 ```{r}
-library(microbenchmark)
-resultfor <- microbenchmark(all2x2for,
-               unit = "us")
-result <- summary(resultfor)
+OddsRatioList <- lapply(
+    X = seq_len(nrow(HairEye)),
+    FUN = function(i) {
+      lapply(
+        X = seq_len(ncol(HairEye)),
+        FUN = function(j) {
+          N_i_j <- HairEye[i,j]
+          N_i1_j1 <- sum(HairEye[-i, -j])
+          N_i1_j <- sum(HairEye[-i, j])
+          N_i_j1 <- sum(HairEye[i, -j])
+          OddsRatio <- (N_i_j * N_i1_j1) / (N_i1_j * N_i_j1)
+      }
+      )
+    }
+  )
+OddsRatioVector <- do.call(c, OddsRatioList)
+OddsRatioMatrix <- matrix(OddsRatioVector, nrow = nrow(HairEye), ncol = ncol(HairEye))
+OddsRatioMatrix
+
 ```
 
-The average time of computation is `r result$mean` microseconds and the average time of the second computation is `r ` microseconds.
+## 9.
 
 ```{r}
-result$mean
+
 ```
 
