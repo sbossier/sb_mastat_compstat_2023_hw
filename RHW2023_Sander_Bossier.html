@@ -422,15 +422,8 @@ HairEye_ranked</code></pre>
 </div>
 <div id="section-3" class="section level2">
 <h2>4.</h2>
-<pre class="r"><code>c(HairEye[&quot;Brown&quot;, &quot;Brown&quot;],
-  HairEye[&quot;Blond&quot;, &quot;Blue&quot;],
-  HairEye[&quot;Brown&quot;, &quot;Blue&quot;])</code></pre>
+<pre class="r"><code>HairEye[rbind(c(&quot;Brown&quot;, &quot;Brown&quot;), c(&quot;Blond&quot;, &quot;Blue&quot;), c(&quot;Brown&quot;, &quot;Blue&quot;))]</code></pre>
 <pre><code>## [1] 119  94  84</code></pre>
-<pre class="r"><code>HairEye[c(&quot;Brown&quot;, &quot;Blond&quot;),c(&quot;Brown&quot;, &quot;Blue&quot;)]</code></pre>
-<pre><code>##        Eye
-## Hair    Brown Blue
-##   Brown   119   84
-##   Blond     7   94</code></pre>
 </div>
 <div id="section-4" class="section level2">
 <h2>5.</h2>
@@ -533,9 +526,9 @@ knitr::kable(df)</code></pre>
 <h2>6.</h2>
 <pre class="r"><code>all2x2_lapply_exp &lt;- expression(
   {
-    all2x2 &lt;- lapply(seq_len(nrow(HairEye)), function(j) {
+    all2x2 &lt;- lapply(seq_len(ncol(HairEye)), function(j) {
       
-      lapply(seq_len(ncol(HairEye)), function(i) {
+      lapply(seq_len(nrow(HairEye)), function(i) {
         
         cell_value &lt;- HairEye[i, j]
         
@@ -565,8 +558,8 @@ knitr::kable(df)</code></pre>
     
     index &lt;- 1
     
-    for (j in 1:nrow(HairEye)) {
-      for (i in 1:ncol(HairEye)) {
+    for (j in 1:ncol(HairEye)) {
+      for (i in 1:nrow(HairEye)) {
         # The value of the cell itself
         cell_value &lt;- HairEye[i, j]
         
@@ -596,21 +589,20 @@ knitr::kable(df)</code></pre>
   all2x2_lapply_exp,
   unit = &quot;us&quot;,
   times = 10000
-)</code></pre>
-<pre><code>## Warning in microbenchmark(all2x2_lapply_exp, unit = &quot;us&quot;, times = 10000): Could
-## not measure a positive execution time for 5115 evaluations.</code></pre>
-<pre class="r"><code>all2x2_lapply_benchm_result &lt;- summary(all2x2_lapply_benchm)
+)
+
+all2x2_lapply_benchm_result &lt;- summary(all2x2_lapply_benchm)
 
 all2x2_for_benchm &lt;- microbenchmark(
   all2x2_for_exp,
-  units = &quot;us&quot;,
+  unit = &quot;us&quot;,
   times = 10000
 )</code></pre>
-<pre><code>## Warning in microbenchmark(all2x2_for_exp, units = &quot;us&quot;, times = 10000): Could
-## not measure a positive execution time for 11162 evaluations.</code></pre>
+<pre><code>## Warning in microbenchmark(all2x2_for_exp, unit = &quot;us&quot;, times = 10000): Could
+## not measure a positive execution time for 390 evaluations.</code></pre>
 <pre class="r"><code>all2x2_for_benchm_result &lt;- summary(all2x2_for_benchm)</code></pre>
-<p>The average time of the first computation is 2.4^{-4} microseconds
-and the average time of the second computation is 0.31, 0
+<p>The average time of the first computation is 0.0344175 microseconds
+and the average time of the second computation is 0.0119697
 microseconds.</p>
 </div>
 <div id="section-7" class="section level2">
@@ -618,10 +610,10 @@ microseconds.</p>
 <pre class="r"><code>GlobalOddsRatio &lt;- function(mat) {
   if (!is.matrix(mat)) stop(&quot;is.matrix(x) is not TRUE&quot;)
   OddsRatioList &lt;- lapply(
-    X = seq_len(nrow(mat)),
+    X = seq_len(ncol(mat)),
     FUN = function(j) {
       lapply(
-        X = seq_len(ncol(mat)),
+        X = seq_len(nrow(mat)),
         FUN = function(i) {
           N_i_j &lt;- mat[i,j]
           N_i1_j1 &lt;- sum(mat[-i, -j])
@@ -651,10 +643,10 @@ GlobalOddsRatio(HairEye)</code></pre>
 <pre class="r"><code>LogOddsRatio &lt;- function(mat, base = exp(1), adjust = 0.5) {
   if (!is.matrix(mat)) stop(&quot;is.matrix(x) is not TRUE&quot;)
   OddsRatioList &lt;- lapply(
-    X = seq_len(nrow(mat)),
+    X = seq_len(ncol(mat)),
     FUN = function(j) {
       lapply(
-        X = seq_len(ncol(mat)),
+        X = seq_len(nrow(mat)),
         FUN = function(i) {
           N_i_j &lt;- ifelse(mat[i,j]==0, adjust, mat[i,j])
           N_i1_j1 &lt;- ifelse(sum(mat[-i, -j])==0, adjust, sum(mat[-i, -j]))
@@ -682,6 +674,42 @@ LogOddsRatio(HairEye)</code></pre>
 </div>
 <div id="section-9" class="section level2">
 <h2>10.</h2>
+<pre class="r"><code># Create S3 class
+CreateTwoWay &lt;- function(mat) {
+  if (!is.matrix(mat)) stop(&quot;is.matrix(x) is not TRUE&quot;)
+    class(mat) &lt;- &quot;TwoWay&quot;
+    mat
+}
+
+
+GOR &lt;- function(x, ...) {
+  UseMethod(&quot;GOR&quot;)
+}
+
+GOR.TwoWay &lt;- GlobalOddsRatio
+
+LOR &lt;- function(x, ...) {
+  UseMethod(&quot;LOR&quot;)
+}
+
+LOR.TwoWay &lt;- LogOddsRatio</code></pre>
+<pre class="r"><code>Titanic2Way &lt;- CreateTwoWay(mat = ClassSurvived)
+class(Titanic2Way)</code></pre>
+<pre><code>## [1] &quot;TwoWay&quot;</code></pre>
+<pre class="r"><code>GOR(Titanic2Way)</code></pre>
+<pre><code>##       Survived
+## Class  No        Yes      
+##   1st  0.2231729 4.480831 
+##   2nd  0.6343505 1.576415 
+##   3rd  1.643486  0.6084627
+##   Crew 1.93891   0.5157536</code></pre>
+<pre class="r"><code>LOR(Titanic2Way)</code></pre>
+<pre><code>##       Survived
+## Class  No         Yes       
+##   1st  -1.499809  1.499809  
+##   2nd  -0.4551536 0.4551536 
+##   3rd  0.4968197  -0.4968197
+##   Crew 0.6621261  -0.6621261</code></pre>
 </div>
 
 

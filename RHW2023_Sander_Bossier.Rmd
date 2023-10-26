@@ -58,12 +58,7 @@ HairEye_ranked
 ## 4.
 
 ```{r}
-c(HairEye["Brown", "Brown"],
-  HairEye["Blond", "Blue"],
-  HairEye["Brown", "Blue"])
-
-HairEye[c("Brown", "Blond"),c("Brown", "Blue")]
-
+HairEye[rbind(c("Brown", "Brown"), c("Blond", "Blue"), c("Brown", "Blue"))]
 ```
 
 ## 5.
@@ -79,9 +74,9 @@ knitr::kable(df)
 ```{r}
 all2x2_lapply_exp <- expression(
   {
-    all2x2 <- lapply(seq_len(nrow(HairEye)), function(j) {
+    all2x2 <- lapply(seq_len(ncol(HairEye)), function(j) {
       
-      lapply(seq_len(ncol(HairEye)), function(i) {
+      lapply(seq_len(nrow(HairEye)), function(i) {
         
         cell_value <- HairEye[i, j]
         
@@ -113,8 +108,8 @@ all2x2_for_exp <- expression(
     
     index <- 1
     
-    for (j in 1:nrow(HairEye)) {
-      for (i in 1:ncol(HairEye)) {
+    for (j in 1:ncol(HairEye)) {
+      for (i in 1:nrow(HairEye)) {
         # The value of the cell itself
         cell_value <- HairEye[i, j]
         
@@ -153,7 +148,7 @@ all2x2_lapply_benchm_result <- summary(all2x2_lapply_benchm)
 
 all2x2_for_benchm <- microbenchmark(
   all2x2_for_exp,
-  units = "us",
+  unit = "us",
   times = 10000
 )
 
@@ -168,10 +163,10 @@ The average time of the first computation is `r all2x2_lapply_benchm_result$mean
 GlobalOddsRatio <- function(mat) {
   if (!is.matrix(mat)) stop("is.matrix(x) is not TRUE")
   OddsRatioList <- lapply(
-    X = seq_len(nrow(mat)),
+    X = seq_len(ncol(mat)),
     FUN = function(j) {
       lapply(
-        X = seq_len(ncol(mat)),
+        X = seq_len(nrow(mat)),
         FUN = function(i) {
           N_i_j <- mat[i,j]
           N_i1_j1 <- sum(mat[-i, -j])
@@ -197,10 +192,10 @@ GlobalOddsRatio(HairEye)
 LogOddsRatio <- function(mat, base = exp(1), adjust = 0.5) {
   if (!is.matrix(mat)) stop("is.matrix(x) is not TRUE")
   OddsRatioList <- lapply(
-    X = seq_len(nrow(mat)),
+    X = seq_len(ncol(mat)),
     FUN = function(j) {
       lapply(
-        X = seq_len(ncol(mat)),
+        X = seq_len(nrow(mat)),
         FUN = function(i) {
           N_i_j <- ifelse(mat[i,j]==0, adjust, mat[i,j])
           N_i1_j1 <- ifelse(sum(mat[-i, -j])==0, adjust, sum(mat[-i, -j]))
@@ -225,5 +220,30 @@ LogOddsRatio(HairEye)
 
 ```{r}
 # Create S3 class
+CreateTwoWay <- function(mat) {
+  if (!is.matrix(mat)) stop("is.matrix(x) is not TRUE")
+    class(mat) <- "TwoWay"
+    mat
+}
 
+
+GOR <- function(x, ...) {
+  UseMethod("GOR")
+}
+
+GOR.TwoWay <- GlobalOddsRatio
+
+LOR <- function(x, ...) {
+  UseMethod("LOR")
+}
+
+LOR.TwoWay <- LogOddsRatio
+```
+
+```{r}
+Titanic2Way <- CreateTwoWay(mat = ClassSurvived)
+class(Titanic2Way)
+
+GOR(Titanic2Way)
+LOR(Titanic2Way)
 ```
