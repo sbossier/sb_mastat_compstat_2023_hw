@@ -11,7 +11,7 @@
 
 <meta name="author" content="Sander Bossier" />
 
-<meta name="date" content="2023-10-26" />
+<meta name="date" content="2023-10-30" />
 
 <title>MaStat CompStat HW</title>
 
@@ -352,14 +352,15 @@ display: none;
 
 <h1 class="title toc-ignore">MaStat CompStat HW</h1>
 <h4 class="author">Sander Bossier</h4>
-<h4 class="date">2023-10-26</h4>
+<h4 class="date">2023-10-30</h4>
 
 </div>
 
 
 <div id="section" class="section level2">
 <h2>1.</h2>
-<pre class="r"><code>HairEye &lt;- apply(
+<pre class="r"><code># Sum over the named margins of the matrices to obtain the reduced matrices
+HairEye &lt;- apply(
   X = HairEyeColor,
   MARGIN = c(&quot;Hair&quot;, &quot;Eye&quot;),
   FUN = sum
@@ -386,7 +387,8 @@ HairEye</code></pre>
 </div>
 <div id="section-1" class="section level2">
 <h2>2.</h2>
-<pre class="r"><code>HairEye[
+<pre class="r"><code># Index the rows and columns with the respective decreasing sums
+HairEye[
   order(rowSums(HairEye), decreasing = TRUE),
   order(colSums(HairEye), decreasing = TRUE)
 ]</code></pre>
@@ -399,19 +401,23 @@ HairEye</code></pre>
 </div>
 <div id="section-2" class="section level2">
 <h2>3.</h2>
-<pre class="r"><code>HairEye_ranks_vec &lt;- rank(
+<pre class="r"><code># Return the ranks of the values of the matrix, first flatten using as.vector
+# Ties are solved by taking the average rank
+HairEye_ranks_vec &lt;- rank(
   as.vector(HairEye),
   ties.method = &quot;average&quot;
 )
 
+# Rebuild the matrix of the ranks with the same dimensions of HairEye,
+# using the dimension names of HairEye for the ranked matrix
 HairEye_ranked &lt;- matrix(
   HairEye_ranks_vec,
   nrow = nrow(HairEye),
-  ncol = ncol(HairEye)
+  ncol = ncol(HairEye),
+  dimnames = dimnames(HairEye)
 )
 
-dimnames(HairEye_ranked) &lt;- dimnames(HairEye)
-
+# Show the ranked matrix
 HairEye_ranked</code></pre>
 <pre><code>##        Eye
 ## Hair    Brown Blue Hazel Green
@@ -422,13 +428,18 @@ HairEye_ranked</code></pre>
 </div>
 <div id="section-3" class="section level2">
 <h2>4.</h2>
-<pre class="r"><code>HairEye[rbind(c(&quot;Brown&quot;, &quot;Brown&quot;), c(&quot;Blond&quot;, &quot;Blue&quot;), c(&quot;Brown&quot;, &quot;Blue&quot;))]</code></pre>
+<pre class="r"><code># Create an indexing matrix by row binding the requested combinations as vectors
+HairEye[rbind(c(&quot;Brown&quot;, &quot;Brown&quot;), c(&quot;Blond&quot;, &quot;Blue&quot;), c(&quot;Brown&quot;, &quot;Blue&quot;))]</code></pre>
 <pre><code>## [1] 119  94  84</code></pre>
 </div>
 <div id="section-4" class="section level2">
 <h2>5.</h2>
-<pre class="r"><code>table &lt;- as.table(HairEye)
+<pre class="r"><code># By converting the matrix to a table it can be converted in a long format by
+# converting to a data frame
+table &lt;- as.table(HairEye)
 df &lt;- as.data.frame(table)
+
+# Print the table using the knitr kable function
 knitr::kable(df)</code></pre>
 <table>
 <thead>
@@ -524,41 +535,134 @@ knitr::kable(df)</code></pre>
 </div>
 <div id="section-5" class="section level2">
 <h2>6.</h2>
-<pre class="r"><code>all2x2_lapply_exp &lt;- expression(
+<pre class="r"><code># Create an expression that returns all2x2 for benchmarking purposes
+all2x2_lapply_exp &lt;- expression(
   {
+    # Nest 2 lapply functions that act on a vector of length = # columns
     all2x2 &lt;- lapply(seq_len(ncol(HairEye)), function(j) {
-      
+      # Act on a vector of length = # rows (initial values are replaced) 
       lapply(seq_len(nrow(HairEye)), function(i) {
-        
+        # Calculate the values of the all2x2 elements
+        # The value of the cell itself
         cell_value &lt;- HairEye[i, j]
         
+        # Sum of values in the same row but not in the same column
         row_sum &lt;- sum(HairEye[i, -j])
         
+        # Sum of values in the same column but not in the same row
         col_sum &lt;- sum(HairEye[-i, j])
         
+        # Sum of the values not in the same row and column
         rest_sum &lt;- sum(HairEye[-i, -j])
         
+        # Create the 2x2 matrix
         matrix(c(cell_value, col_sum, row_sum, rest_sum), nrow = 2)
-        
         })
-      
+      # The result is a list of list containing the matrices for a specific
+      # column in the parent list and a list with each element the matrix for
+      # a specific row in that column.
       })
-    
+    # Concatenate the parent list to return a list of 16 components
     all2x2 &lt;- do.call(c, all2x2)
   }
 )
-#all2x2_lapply_exp
-#all2x2</code></pre>
+
+eval(all2x2_lapply_exp)
+
+all2x2</code></pre>
+<pre><code>## [[1]]
+##      [,1] [,2]
+## [1,]   68   40
+## [2,]  152  332
+## 
+## [[2]]
+##      [,1] [,2]
+## [1,]  119  167
+## [2,]  101  205
+## 
+## [[3]]
+##      [,1] [,2]
+## [1,]   26   45
+## [2,]  194  327
+## 
+## [[4]]
+##      [,1] [,2]
+## [1,]    7  120
+## [2,]  213  252
+## 
+## [[5]]
+##      [,1] [,2]
+## [1,]   20   88
+## [2,]  195  289
+## 
+## [[6]]
+##      [,1] [,2]
+## [1,]   84  202
+## [2,]  131  175
+## 
+## [[7]]
+##      [,1] [,2]
+## [1,]   17   54
+## [2,]  198  323
+## 
+## [[8]]
+##      [,1] [,2]
+## [1,]   94   33
+## [2,]  121  344
+## 
+## [[9]]
+##      [,1] [,2]
+## [1,]   15   93
+## [2,]   78  406
+## 
+## [[10]]
+##      [,1] [,2]
+## [1,]   54  232
+## [2,]   39  267
+## 
+## [[11]]
+##      [,1] [,2]
+## [1,]   14   57
+## [2,]   79  442
+## 
+## [[12]]
+##      [,1] [,2]
+## [1,]   10  117
+## [2,]   83  382
+## 
+## [[13]]
+##      [,1] [,2]
+## [1,]    5  103
+## [2,]   59  425
+## 
+## [[14]]
+##      [,1] [,2]
+## [1,]   29  257
+## [2,]   35  271
+## 
+## [[15]]
+##      [,1] [,2]
+## [1,]   14   57
+## [2,]   50  471
+## 
+## [[16]]
+##      [,1] [,2]
+## [1,]   16  111
+## [2,]   48  417</code></pre>
 </div>
 <div id="section-6" class="section level2">
 <h2>7.</h2>
 <pre class="r"><code>all2x2_for_exp &lt;- expression(
   {
-    all2x2 &lt;- vector(&quot;list&quot;, length = nrow(HairEye) * ncol(HairEye))
+    # Create an empty list with the length of the HairEye matrix
+    all2x2 &lt;- vector(mode = &quot;list&quot;, length = length(HairEye))
     
+    # Create an index to store the calculated 2x2 matrices
     index &lt;- 1
     
+    # Create a for loop to loop over all the columns
     for (j in 1:ncol(HairEye)) {
+      # In each column, loop over the rows to calculate the specific 2x2 matrix
       for (i in 1:nrow(HairEye)) {
         # The value of the cell itself
         cell_value &lt;- HairEye[i, j]
@@ -569,7 +673,7 @@ knitr::kable(df)</code></pre>
         # Sum of values in the same column but not in the same row
         col_sum &lt;- sum(HairEye[-i, j])
         
-        # Sum of the values not in the same row or column
+        # Sum of the values not in the same row and column
         other_sum &lt;- sum(HairEye[-i, -j])
         
         # Create the 2x2 matrix
@@ -580,35 +684,43 @@ knitr::kable(df)</code></pre>
       
         # Add the 2x2 matrix to the list
         all2x2[[index]] &lt;- matrix_2x2
+        
         index &lt;- index + 1
         }
       }
     }
 )</code></pre>
-<pre class="r"><code>all2x2_lapply_benchm &lt;- microbenchmark(
+<pre class="r"><code># Benchmark the lapply solution
+all2x2_lapply_benchm &lt;- microbenchmark(
   all2x2_lapply_exp,
   unit = &quot;us&quot;,
   times = 10000
-)
-
+)</code></pre>
+<pre><code>## Warning in microbenchmark(all2x2_lapply_exp, unit = &quot;us&quot;, times = 10000): Could
+## not measure a positive execution time for 353 evaluations.</code></pre>
+<pre class="r"><code># Summarize the lapply benchmark
 all2x2_lapply_benchm_result &lt;- summary(all2x2_lapply_benchm)
 
+# Benchmark the for loop solution
 all2x2_for_benchm &lt;- microbenchmark(
   all2x2_for_exp,
   unit = &quot;us&quot;,
   times = 10000
 )</code></pre>
 <pre><code>## Warning in microbenchmark(all2x2_for_exp, unit = &quot;us&quot;, times = 10000): Could
-## not measure a positive execution time for 390 evaluations.</code></pre>
-<pre class="r"><code>all2x2_for_benchm_result &lt;- summary(all2x2_for_benchm)</code></pre>
-<p>The average time of the first computation is 0.0344175 microseconds
-and the average time of the second computation is 0.0119697
-microseconds.</p>
+## not measure a positive execution time for 5 evaluations.</code></pre>
+<pre class="r"><code># Summarize the for loop benchmark
+all2x2_for_benchm_result &lt;- summary(all2x2_for_benchm)</code></pre>
+<p>The average time of the first computation is 0.00123 microseconds and
+the average time of the second computation is 0.04798 microseconds.</p>
 </div>
 <div id="section-7" class="section level2">
 <h2>8.</h2>
 <pre class="r"><code>GlobalOddsRatio &lt;- function(mat) {
+  # Check if input is matrix
   if (!is.matrix(mat)) stop(&quot;is.matrix(x) is not TRUE&quot;)
+  # Else calculate the global odd ratio matrix based on the way the 2x2 matrices
+  # are calculated using nested lapply loops
   OddsRatioList &lt;- lapply(
     X = seq_len(ncol(mat)),
     FUN = function(j) {
@@ -619,14 +731,24 @@ microseconds.</p>
           N_i1_j1 &lt;- sum(mat[-i, -j])
           N_i1_j &lt;- sum(mat[-i, j])
           N_i_j1 &lt;- sum(mat[i, -j])
+          # Calculate the odds ratio
           OddsRatio &lt;- (N_i_j * N_i1_j1) / (N_i1_j * N_i_j1)
       }
       )
     }
   )
+  # Flatten the list to a vector
   OddsRatioVector &lt;- do.call(c, OddsRatioList)
-  OddsRatioMatrix &lt;- matrix(OddsRatioVector, nrow=nrow(mat), ncol=ncol(mat))
-  dimnames(OddsRatioMatrix) &lt;- dimnames(mat)
+  
+  # Reconstruct the matrix based on the properties of the input matrix
+  OddsRatioMatrix &lt;- matrix(
+    OddsRatioVector,
+    nrow=nrow(mat),
+    ncol=ncol(mat),
+    dimnames = dimnames(mat)
+    )
+  
+  # Return the OddsRatioMatrix
   OddsRatioMatrix
 }
 
@@ -641,26 +763,37 @@ GlobalOddsRatio(HairEye)</code></pre>
 <div id="section-8" class="section level2">
 <h2>9.</h2>
 <pre class="r"><code>LogOddsRatio &lt;- function(mat, base = exp(1), adjust = 0.5) {
+  # Check if matrix is in fact a matrix
   if (!is.matrix(mat)) stop(&quot;is.matrix(x) is not TRUE&quot;)
+  # Nested lapply for the LogOdds value for a specific cell calculation
   OddsRatioList &lt;- lapply(
     X = seq_len(ncol(mat)),
     FUN = function(j) {
       lapply(
         X = seq_len(nrow(mat)),
         FUN = function(i) {
+          # Use ifelse statement to check if result would be 0, else adjust
           N_i_j &lt;- ifelse(mat[i,j]==0, adjust, mat[i,j])
           N_i1_j1 &lt;- ifelse(sum(mat[-i, -j])==0, adjust, sum(mat[-i, -j]))
           N_i1_j &lt;- ifelse(sum(mat[-i, j])==0, adjust, sum(mat[-i, j]))
           N_i_j1 &lt;- ifelse(sum(mat[i, -j])==0, adjust, sum(mat[i, -j]))
           OddsRatio &lt;- (N_i_j * N_i1_j1) / (N_i1_j * N_i_j1)
+          # Calculate LogOddsRatio with specified base
           LogOddsRatio &lt;- log(OddsRatio, base = base)
       }
       )
     }
   )
+  # Flatten list to vector
   OddsRatioVector &lt;- do.call(c, OddsRatioList)
-  OddsRatioMatrix &lt;- matrix(OddsRatioVector, nrow=nrow(mat), ncol=ncol(mat))
-  dimnames(OddsRatioMatrix) &lt;- dimnames(mat)
+  # Reconstruct matrix
+  OddsRatioMatrix &lt;- matrix(
+    OddsRatioVector,
+    nrow=nrow(mat),
+    ncol=ncol(mat),
+    dimnames = dimnames(mat)
+    )
+  # Return OddsRatioMatrix
   OddsRatioMatrix
 }
 
@@ -681,19 +814,23 @@ CreateTwoWay &lt;- function(mat) {
     mat
 }
 
-
+# Create generic
 GOR &lt;- function(x, ...) {
   UseMethod(&quot;GOR&quot;)
 }
 
+# Assign function to S3 function
 GOR.TwoWay &lt;- GlobalOddsRatio
 
+# Create generic
 LOR &lt;- function(x, ...) {
   UseMethod(&quot;LOR&quot;)
 }
 
+# Assign function to S3 function
 LOR.TwoWay &lt;- LogOddsRatio</code></pre>
-<pre class="r"><code>Titanic2Way &lt;- CreateTwoWay(mat = ClassSurvived)
+<pre class="r"><code># Test functions
+Titanic2Way &lt;- CreateTwoWay(mat = ClassSurvived)
 class(Titanic2Way)</code></pre>
 <pre><code>## [1] &quot;TwoWay&quot;</code></pre>
 <pre class="r"><code>GOR(Titanic2Way)</code></pre>
