@@ -697,7 +697,7 @@ all2x2_lapply_benchm &lt;- microbenchmark(
   times = 10000
 )</code></pre>
 <pre><code>## Warning in microbenchmark(all2x2_lapply_exp, unit = &quot;us&quot;, times = 10000): Could
-## not measure a positive execution time for 353 evaluations.</code></pre>
+## not measure a positive execution time for 1817 evaluations.</code></pre>
 <pre class="r"><code># Summarize the lapply benchmark
 all2x2_lapply_benchm_result &lt;- summary(all2x2_lapply_benchm)
 
@@ -708,11 +708,12 @@ all2x2_for_benchm &lt;- microbenchmark(
   times = 10000
 )</code></pre>
 <pre><code>## Warning in microbenchmark(all2x2_for_exp, unit = &quot;us&quot;, times = 10000): Could
-## not measure a positive execution time for 5 evaluations.</code></pre>
+## not measure a positive execution time for 2637 evaluations.</code></pre>
 <pre class="r"><code># Summarize the for loop benchmark
 all2x2_for_benchm_result &lt;- summary(all2x2_for_benchm)</code></pre>
-<p>The average time of the first computation is 0.00123 microseconds and
-the average time of the second computation is 0.04798 microseconds.</p>
+<p>The average time of the first computation is 5.8^{-4} microseconds
+and the average time of the second computation is 2.8^{-4}
+microseconds.</p>
 </div>
 <div id="section-7" class="section level2">
 <h2>8.</h2>
@@ -819,7 +820,7 @@ GOR &lt;- function(x, ...) {
   UseMethod(&quot;GOR&quot;)
 }
 
-# Assign function to S3 function
+# Assign function to the S3 method
 GOR.TwoWay &lt;- GlobalOddsRatio
 
 # Create generic
@@ -827,7 +828,7 @@ LOR &lt;- function(x, ...) {
   UseMethod(&quot;LOR&quot;)
 }
 
-# Assign function to S3 function
+# Assign function to the S3 method
 LOR.TwoWay &lt;- LogOddsRatio</code></pre>
 <pre class="r"><code># Test functions
 Titanic2Way &lt;- CreateTwoWay(mat = ClassSurvived)

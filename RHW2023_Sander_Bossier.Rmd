@@ -286,7 +286,7 @@ GOR <- function(x, ...) {
   UseMethod("GOR")
 }
 
-# Assign function to S3 function
+# Assign function to the S3 method
 GOR.TwoWay <- GlobalOddsRatio
 
 # Create generic
@@ -294,7 +294,7 @@ LOR <- function(x, ...) {
   UseMethod("LOR")
 }
 
-# Assign function to S3 function
+# Assign function to the S3 method
 LOR.TwoWay <- LogOddsRatio
 ```
 
